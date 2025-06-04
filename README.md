@@ -61,10 +61,10 @@ Kompletny projekt systemu oceniania studentów, oparty na Oracle i Django REST F
 - [x] Skrypt tworzący bazę danych i dane demo
 - [x] Diagram encji (osobno w `Baza.png`)
 - [x] Web API z dokumentacją OpenAPI (Swagger)
-- [] Widoki i procedury w PL/SQL
-- [] ORM po stronie Django (opcjonalnie)
-- [] Testy wydajnościowe do wykonania osobno
-- [] Dokumentacja i kod źródłowy
+- [ ] Widoki i procedury w PL/SQL
+- [ ] ORM po stronie Django (opcjonalnie)
+- [ ] Testy wydajnościowe do wykonania osobno
+- [ ] Dokumentacja i kod źródłowy
 
 ---
 
