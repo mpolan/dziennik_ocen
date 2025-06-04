@@ -54,18 +54,11 @@ SELECT
     s.id AS student_id,
     s.imie AS student_imie,
     s.nazwisko AS student_nazwisko,
-    p.id AS przedmiot_id,
-    p.nazwa AS nazw_przedmiotu,
-    n.imie AS prowadzacy_imie,
-    n.nazwisko AS prowadzacy_nazwisko,
     ROUND(AVG(o.wartosc), 2) AS srednia,
     DENSE_RANK() OVER (ORDER BY AVG(o.wartosc) DESC) AS pozycja
 FROM STUDENT s
 JOIN OCENA o ON s.id = o.student_id
-JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
-JOIN NAUCZYCIEL n ON n.id = o.nauczyciel_id
-GROUP BY s.id, s.imie, s.nazwisko, p.id, p.nazwa, n.imie, n.nazwisko;
-
+GROUP BY s.id, s.imie, s.nazwisko;
 
 
 -- Procedura do POST /dodaj-ocene

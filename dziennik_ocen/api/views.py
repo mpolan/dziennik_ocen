@@ -52,11 +52,35 @@ class OcenyStudentaView(APIView):
                 results = []
                 for row in rows:
                     results.append({
-                        'przedmiot': row[0],
-                        'typ': row[1],
-                        'ocena': row[2],
-                        'data': row[3],
-                        'nauczyciel': f"{row[4]} {row[5]}"
+                        'Przedmiot': row[0],
+                        'Typ': row[1],
+                        'Ocena': row[2],
+                        'Prowadzacy': f"{row[4]} {row[5]}",
+                        'Data Wystawienia': row[3]
+                    })
+
+            return Response(results)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class OgolnyRankingOcenView(APIView):
+    @swagger_auto_schema(operation_summary="Pobierz ogólny ranking studentów wg średniej ocen")
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pozycja, student_imie, student_nazwisko, srednia
+                    FROM vw_ranking
+                """)
+
+                rows = cursor.fetchall()
+                results = []
+                for row in rows:
+                    results.append({
+                        'Pozycja': row[0],
+                        'Student': f"{row[1]} {row[2]}",
+                        'Średnia Ocen': row[3]
                     })
 
             return Response(results)
