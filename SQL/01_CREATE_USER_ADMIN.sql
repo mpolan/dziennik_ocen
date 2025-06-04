@@ -23,9 +23,14 @@ QUOTA UNLIMITED ON users;
 
 -- Nadanie podstawowych uprawnień
 GRANT CONNECT, RESOURCE TO admin;
+GRANT EXECUTE ON DBMS_CRYPTO TO admin;
+-- Daje możliwość tworzenia widoków i procedur
+GRANT CREATE VIEW, CREATE PROCEDURE TO admin;
 
--- (opcjonalnie) dodatkowe uprawnienia, jeśli potrzebne:
--- GRANT CREATE VIEW, CREATE PROCEDURE, CREATE TRIGGER TO admin;
--- GRANT UNLIMITED TABLESPACE TO admin;
+-- Daje pełny dostęp do własnych danych i wykonywania kwerend
+GRANT SELECT ANY TABLE TO admin;
+
+-- (opcjonalnie – gdyby coś nie działało dalej)
+GRANT UNLIMITED TABLESPACE TO admin;
 
 -- Gotowe! Teraz można się logować jako admin/admin
