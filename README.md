@@ -8,40 +8,137 @@ Kompletny projekt systemu oceniania studentów, oparty na Oracle i Django REST F
 
 | Plik                          | Opis |
 |-------------------------------|------|
-| `00_czyszczenie_bazy.sql`     | Skrypt do całkowitego usunięcia obiektów w bazie |
-| `1_struktura_bazy.sql`        | Tworzy wszystkie tabele i relacje |
-| `2_inserty_triggery.sql`      | Zawiera triggery, funkcję `hashuj_haslo`, dane testowe |
-| `3_widoki_i_procedury.sql`    | Widoki do GET API i procedura `dodaj_ocene` do POST |
+| `00_CZYSTKA_BAZY.sql`         | Skrypt do całkowitego usunięcia obiektów w bazie |
+| `01_CREATE_USER_ADMIN.sql`    | Tworzy potrzebnego user'a admina |
+| `02_STRUKTURA_BAZY.sql`       | Tworzy wszystkie tabele i relacje |
+| `03_INSERTY_I_TRIGGERY.sql`   | Zawiera triggery, funkcję `hashuj_haslo`, dane testowe |
+| `04_WIDOKI_I_PROCEDURY.sql`   | Widoki do GET API i procedura `dodaj_ocene` do POST |
 
 ---
 
 ## 🧪 Uruchamianie w Oracle SQL Developer
 
-### 1. Wyczyść bazę (opcjonalnie)
-
-```sql
-@00_czyszczenie_bazy.sql
+#### Przypomnienie
+```powershell
+python -m venv venv
 ```
 
-### 2. Utwórz strukturę
-
-```sql
-@1_struktura_bazy.sql
+```powershell
+./venv/scripts/activate.ps1
+```
+> 💡 **Uwaga:** Jeśli pojawi się błąd dotyczący polityki uruchamiania skryptów, możesz tymczasowo zmienić ustawienia za pomocą:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+```
+```powershell
+pip install -r requirements.txt
 ```
 
-### 3. Dodaj triggery, funkcje, dane
+### 📦 Wymagania:
+- Skopiowany/sforkowany projekt github'a
+- SQL Developer (GUI do uruchamiania plików SQL)
+- Python 3.10+
+- Django + django-rest-framework + drf-yasg (pip install -r requirements.txt)
+- Pliki SQL:  
+  - `00_CZYSTKA_BAZY.sql`  
+  - `01_CREATE_USER_ADMIN.sql`  
+  - `02_STRUKTURA_BAZY.sql`  
+  - `03_INSERTY_I_TRIGGERY.sql`  
+  - `04_WIDOKI_I_PROCEDURY.sql`
 
-```sql
-@2_inserty_triggery.sql
+---
+
+### 1. Otwórz SQL Developer i połącz się jako `SYS as SYSDBA`
+
+**Dane połączenia:**
 ```
-
-### 4. Dodaj widoki i procedury API
-
-```sql
-@3_widoki_i_procedury.sql
+Username: SYS
+Password: mypassword1
+Connect As: SYSDBA
+Host: localhost
+Port: 1521
+Service Name: ORCLPDB1
 ```
 
 ---
+
+### 2. [Opcjonalnie] Wyczyść starą bazę
+
+W SQL Developerze otwórz i uruchom (F5):
+
+```sql
+00_CZYSTKA_BAZY.sql
+```
+
+---
+
+### 3. Utwórz użytkownika `admin`
+
+Jako SYS, uruchom:
+
+```sql
+01_CREATE_USER_ADMIN.sql
+```
+
+---
+
+### 4. Zaloguj się ponownie jako `admin`
+
+**Nowe połączenie w SQL Developerze:**
+```
+Username: admin
+Password: admin
+Host: localhost
+Port: 1521
+Service Name: ORCLPDB1
+```
+
+---
+
+### 5. Utwórz strukturę bazy:
+
+Zalogowany jako `admin`, uruchom kolejno:
+
+```sql
+02_STRUKTURA_BAZY.sql
+```
+
+---
+
+### 6. Dodaj triggery i dane testowe:
+
+```sql
+03_INSERTY_I_TRIGGERY.sql
+```
+
+---
+
+### 7. Dodaj widoki i procedury:
+
+```sql
+04_WIDOKI_I_PROCEDURY.sql
+```
+
+---
+
+### 8. Uruchom serwer:
+
+```bash
+python manage.py runserver
+```
+
+---
+
+### 9. Otwórz Swagger
+
+Wejdź w przeglądarce na:
+
+```
+http://localhost:8000/swagger/
+```
+
+I gotowe ✅
+
 
 ## 🚀 Backend – Django REST API
 
