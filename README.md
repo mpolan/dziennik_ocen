@@ -144,13 +144,13 @@ I gotowe ✅
 
 ## 🔌 Endpointy API
 
-| Metoda | Endpoint                  | Opis |
-|--------|---------------------------|------|
-| `POST` | `/api/dodaj-ocene/`       | Wywołuje procedurę `dodaj_ocene(...)` |
-| `GET`  | `/api/oceny-studenta/`    | Zwraca listę ocen z widoku `vw_oceny_szczegoly` |
-| `GET`  | `/api/ranking/`           | Ranking studentów z widoku `vw_ranking` |
-| `GET`  | `/api/ranking-przedmiotu/`| Ranking dla danego przedmiotu |
-| `GET`  | `/api/zaliczenia/`        | Status zaliczenia z widoku `vw_zaliczenia` |
+| Metoda | Endpoint                  | Opis                                             | Status |
+|--------|---------------------------|--------------------------------------------------|--------|
+| `POST` | `/api/dodaj-ocene/`       | Wywołuje procedurę `dodaj_ocene(...)`           | ✅ Zrealizowano |
+| `GET`  | `/api/oceny-studenta/`    | Zwraca listę ocen z widoku `vw_oceny_szczegoly` | ✅ Zrealizowano |
+| `GET`  | `/api/ogolny-ranking/`    | Ranking studentów z widoku `vw_ranking`         | ✅ Zrealizowano |
+| `GET`  | `/api/ranking-przedmiotu/`| Ranking dla danego przedmiotu                   | ❌ W planie |
+| `GET`  | `/api/zaliczenia/`        | Status zaliczenia z widoku `vw_zaliczenia`      | ❌ W planie |
 
 ---
 
