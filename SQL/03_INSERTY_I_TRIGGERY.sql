@@ -3,55 +3,70 @@
 -- ===================================
 
 -- Funkcja haszująca hasło
-CREATE OR REPLACE FUNCTION hashuj_haslo(p_haslo VARCHAR2) RETURN VARCHAR2 IS
-  v_hash RAW(32);
+CREATE OR REPLACE FUNCTION HASHUJ_HASLO(P_HASLO VARCHAR2) RETURN VARCHAR2 IS
+  V_HASH RAW(32);
 BEGIN
-  v_hash := DBMS_CRYPTO.HASH(UTL_I18N.STRING_TO_RAW(p_haslo, 'AL32UTF8'), DBMS_CRYPTO.HASH_SH256);
-  RETURN RAWTOHEX(v_hash);
+  V_HASH := DBMS_CRYPTO.HASH(UTL_I18N.STRING_TO_RAW(P_HASLO, 'AL32UTF8'), DBMS_CRYPTO.HASH_SH256);
+  RETURN RAWTOHEX(V_HASH);
 END;
 /
 
 
 -- Triggery do tworzenia użytkowników przy INSERT
-CREATE OR REPLACE TRIGGER trg_utworz_uzytkownika_student
+CREATE OR REPLACE TRIGGER TRG_UTWORZ_UZYTKOWNIKA_STUDENT
 AFTER INSERT ON STUDENT
 FOR EACH ROW
 DECLARE
-  v_new_id NUMBER;
+    V_NEW_ID NUMBER;
+    V_HASLO VARCHAR2(10);
 BEGIN
-  SELECT NVL(MAX(id), 0) + 1 INTO v_new_id FROM UZYTKOWNIK;
-
-  INSERT INTO UZYTKOWNIK (id, login, haslo, rola)
-  VALUES (
-    v_new_id,
-    :NEW.email,
-    hashuj_haslo(:NEW.email),
-    'STUDENT'
-  );
+    SELECT NVL(MAX(ID), 0) + 1 INTO V_NEW_ID FROM UZYTKOWNIK;
+     -- Budowa hasła: pierwsza litera imienia + nazwiska + ID
+    V_HASLO := SUBSTR(:NEW.IMIE, 1, 1) || SUBSTR(:NEW.NAZWISKO, 1, 1) || TO_CHAR(:NEW.ID);
+    
+    INSERT INTO UZYTKOWNIK (ID, LOGIN, HASLO, ROLA)
+    VALUES (
+        V_NEW_ID,
+        :NEW.EMAIL,
+        HASHUJ_HASLO(V_HASLO),
+        'STUDENT'
+    );
 END;
 /
 
-CREATE OR REPLACE TRIGGER trg_utworz_uzytkownika_nauczyciel
+CREATE OR REPLACE TRIGGER TRG_UTWORZ_UZYTKOWNIKA_NAUCZYCIEL
 AFTER INSERT ON NAUCZYCIEL
 FOR EACH ROW
 DECLARE
-  v_new_id NUMBER;
+    V_NEW_ID NUMBER;
+    V_HASLO VARCHAR2(10);
 BEGIN
-  SELECT NVL(MAX(id), 0) + 1 INTO v_new_id FROM UZYTKOWNIK;
-
-  INSERT INTO UZYTKOWNIK (id, login, haslo, rola)
-  VALUES (
-    v_new_id,
-    :NEW.email,
-    hashuj_haslo(:NEW.email),
-    'NAUCZYCIEL'
-  );
+    SELECT NVL(MAX(ID), 0) + 1 INTO V_NEW_ID FROM UZYTKOWNIK;
+     -- Budowa hasła: pierwsza litera imienia + nazwiska + ID
+    V_HASLO := SUBSTR(:NEW.IMIE, 1, 1) || SUBSTR(:NEW.NAZWISKO, 1, 1) || TO_CHAR(:NEW.ID);
+    INSERT INTO UZYTKOWNIK (ID, LOGIN, HASLO, ROLA)
+    VALUES (
+        V_NEW_ID,
+        :NEW.EMAIL,
+        HASHUJ_HASLO(V_HASLO),
+        'NAUCZYCIEL'
+    );
 END;
 /
 
 
 
 -- Wstawianie przykładowych danych
+-- ========================
+--        ADMIN USER
+-- ========================
+
+INSERT INTO NAUCZYCIEL (ID, IMIE, NAZWISKO, EMAIL) VALUES (0, 'SYSTEM', 'ADMIN', 'admin@example.com');
+UPDATE UZYTKOWNIK
+SET HASLO = HASHUJ_HASLO('admin'),
+    ROLA = 'ADMIN',
+    ID = 0
+WHERE LOGIN = 'admin@example.com';
 
 -- ====================================================================================
 --      INSERTY TESTOWE (100 studentów, 10 przedmiotów, 20 nauczycieli, grupy)
@@ -1249,7 +1264,7 @@ INSERT INTO LOG_ZMIAN VALUES (10, 2, 'UPDATE', 'OCENA', 77, SYSTIMESTAMP);
 
 COMMIT;
 
-select * from student;
+SELECT * FROM STUDENT;
 
 --TRUNCATE TABLE HISTORIA_OCEN;
 --TRUNCATE TABLE LOG_ZMIAN;

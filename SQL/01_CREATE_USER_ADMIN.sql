@@ -16,21 +16,21 @@ END;
 /
 
 -- Tworzenie użytkownika
-CREATE USER admin IDENTIFIED BY admin
-DEFAULT TABLESPACE users
-TEMPORARY TABLESPACE temp
-QUOTA UNLIMITED ON users;
+CREATE USER ADMIN IDENTIFIED BY ADMIN
+DEFAULT TABLESPACE USERS
+TEMPORARY TABLESPACE TEMP
+QUOTA UNLIMITED ON USERS;
 
 -- Nadanie podstawowych uprawnień
-GRANT CONNECT, RESOURCE TO admin;
-GRANT EXECUTE ON DBMS_CRYPTO TO admin;
+GRANT CONNECT, RESOURCE TO ADMIN;
+GRANT EXECUTE ON DBMS_CRYPTO TO ADMIN;
 -- Daje możliwość tworzenia widoków i procedur
-GRANT CREATE VIEW, CREATE PROCEDURE TO admin;
+GRANT CREATE VIEW, CREATE PROCEDURE TO ADMIN;
 
 -- Daje pełny dostęp do własnych danych i wykonywania kwerend
-GRANT SELECT ANY TABLE TO admin;
+GRANT SELECT ANY TABLE TO ADMIN;
 
 -- (opcjonalnie – gdyby coś nie działało dalej)
-GRANT UNLIMITED TABLESPACE TO admin;
+GRANT UNLIMITED TABLESPACE TO ADMIN;
 
 -- Gotowe! Teraz można się logować jako admin/admin

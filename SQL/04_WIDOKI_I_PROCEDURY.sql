@@ -2,124 +2,129 @@
 --        WIDOKI + PROCEDURY API
 -- ===================================
 -- Widoki używane w GET
-CREATE OR REPLACE VIEW vw_srednie_ocen AS
+CREATE OR REPLACE VIEW VW_SREDNIE_OCEN AS
 SELECT
-    s.id AS student_id,
-    s.imie AS student_imie,
-    s.nazwisko AS student_nazwisko,
-    p.id AS przedmiot_id,
-    p.nazwa AS przedmiot_nazwa,
-    ROUND(AVG(o.wartosc), 2) AS srednia_ocen
-FROM OCENA o
-JOIN STUDENT s ON s.id = o.student_id
-JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
-GROUP BY s.id, s.imie, s.nazwisko, p.id, p.nazwa;
+    S.ID AS STUDENT_ID,
+    S.IMIE AS STUDENT_IMIE,
+    S.NAZWISKO AS STUDENT_NAZWISKO,
+    P.ID AS PRZEDMIOT_ID,
+    P.NAZWA AS PRZEDMIOT_NAZWA,
+    ROUND(AVG(O.WARTOSC), 2) AS SREDNIA_OCEN
+FROM OCENA O
+JOIN STUDENT S ON S.ID = O.STUDENT_ID
+JOIN PRZEDMIOT P ON P.ID = O.PRZEDMIOT_ID
+GROUP BY S.ID, S.IMIE, S.NAZWISKO, P.ID, P.NAZWA;
 
-CREATE OR REPLACE VIEW vw_oceny_szczegoly AS
+CREATE OR REPLACE VIEW VW_OCENY_SZCZEGOLY AS
 SELECT
-    o.id AS ocena_id,
-    s.id AS student_id,
-    s.imie AS student_imie,
-    s.nazwisko AS student_nazwisko,
-    p.nazwa AS przedmiot_nazwa,
-    o.typ,
-    o.wartosc,
-    TO_CHAR(o.data_wystawienia, 'YYYY-MM-DD') AS data_wystawienia,
-    n.imie AS nauczyciel_imie,
-    n.nazwisko AS nauczyciel_nazwisko,
-    n.email AS nauczyciel_email
-FROM OCENA o
-JOIN STUDENT s ON s.id = o.student_id
-JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
-JOIN NAUCZYCIEL n ON n.id = o.nauczyciel_id;
+    O.ID AS OCENA_ID,
+    S.ID AS STUDENT_ID,
+    S.IMIE AS STUDENT_IMIE,
+    S.NAZWISKO AS STUDENT_NAZWISKO,
+    P.NAZWA AS PRZEDMIOT_NAZWA,
+    O.TYP,
+    O.WARTOSC,
+    TO_CHAR(O.DATA_WYSTAWIENIA, 'YYYY-MM-DD') AS DATA_WYSTAWIENIA,
+    N.IMIE AS NAUCZYCIEL_IMIE,
+    N.NAZWISKO AS NAUCZYCIEL_NAZWISKO,
+    N.EMAIL AS NAUCZYCIEL_EMAIL,
+    S.EMAIL AS STUDENT_EMAIL
+FROM OCENA O
+JOIN STUDENT S ON S.ID = O.STUDENT_ID
+JOIN PRZEDMIOT P ON P.ID = O.PRZEDMIOT_ID
+JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID;
 
-CREATE OR REPLACE VIEW vw_zaliczenia AS
+CREATE OR REPLACE VIEW VW_ZALICZENIA AS
 SELECT
-    s.id AS student_id,
-    s.imie || ' ' || s.nazwisko AS student,
-    p.id AS przedmiot_id,
-    n.imie || ' ' || n.nazwisko AS nauczyciel,
-    p.nazwa AS przedmiot,
-    n.email as nauczyciel_email,
-    ROUND(AVG(o.wartosc), 2) AS srednia,
+    S.ID AS STUDENT_ID,
+    S.IMIE || ' ' || S.NAZWISKO AS STUDENT,
+    P.ID AS PRZEDMIOT_ID,
+    N.IMIE || ' ' || N.NAZWISKO AS NAUCZYCIEL,
+    P.NAZWA AS PRZEDMIOT,
+    N.EMAIL AS NAUCZYCIEL_EMAIL,
+    S.EMAIL AS STUDENT_EMAIL,
+    ROUND(AVG(O.WARTOSC), 2) AS SREDNIA,
     CASE
-        WHEN AVG(o.wartosc) >= 3.0 THEN 'zaliczony'
+        WHEN AVG(O.WARTOSC) >= 3.0 THEN 'zaliczony'
         ELSE 'niezaliczony'
-    END AS status
-FROM OCENA o
-JOIN STUDENT s ON s.id = o.student_id
-JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
-JOIN NAUCZYCIEL n ON n.id = o.nauczyciel_id
-GROUP BY s.id, s.imie, s.nazwisko, n.imie, n.nazwisko, p.id, p.nazwa, n.email;
+    END AS STATUS
+FROM OCENA O
+JOIN STUDENT S ON S.ID = O.STUDENT_ID
+JOIN PRZEDMIOT P ON P.ID = O.PRZEDMIOT_ID
+JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
+GROUP BY S.ID, S.IMIE, S.NAZWISKO, N.IMIE, N.NAZWISKO, P.ID, P.NAZWA, N.EMAIL, S.EMAIL;
 
-CREATE OR REPLACE VIEW vw_ranking AS
+CREATE OR REPLACE VIEW VW_RANKING AS
 SELECT
-    s.id AS student_id,
-    s.imie AS student_imie,
-    s.nazwisko AS student_nazwisko,
-    ROUND(AVG(o.wartosc), 2) AS srednia,
-    DENSE_RANK() OVER (ORDER BY AVG(o.wartosc) DESC) AS pozycja
-FROM STUDENT s
-JOIN OCENA o ON s.id = o.student_id
-GROUP BY s.id, s.imie, s.nazwisko;
+    S.ID AS STUDENT_ID,
+    S.IMIE AS STUDENT_IMIE,
+    S.NAZWISKO AS STUDENT_NAZWISKO,
+    ROUND(AVG(O.WARTOSC), 2) AS SREDNIA,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA
+FROM STUDENT S
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+GROUP BY S.ID, S.IMIE, S.NAZWISKO;
 
 
 -- Procedura do POST /dodaj-ocene
-CREATE OR REPLACE PROCEDURE dodaj_ocene (
-    p_email        IN VARCHAR2,
-    p_student_id   IN NUMBER,
-    p_przedmiot_id IN NUMBER,
-    p_ocena        IN NUMBER,
-    p_typ          IN VARCHAR2
+CREATE OR REPLACE PROCEDURE DODAJ_OCENE (
+    P_EMAIL        IN VARCHAR2,
+    P_STUDENT_ID   IN NUMBER,
+    P_PRZEDMIOT_ID IN NUMBER,
+    P_OCENA        IN NUMBER,
+    P_TYP          IN VARCHAR2
 )IS
-    v_rola          VARCHAR2(20);
-    v_nauczyciel_id NUMBER;
-    v_ocena_id      NUMBER;
-    v_student_licznik NUMBER;
-    v_przedmiot_licznik NUMBER;
+    V_ROLA          VARCHAR2(20);
+    V_NAUCZYCIEL_ID NUMBER;
+    V_OCENA_ID      NUMBER;
+    V_STUDENT_LICZNIK NUMBER;
+    V_PRZEDMIOT_LICZNIK NUMBER;
 BEGIN
-    SELECT rola INTO v_rola FROM UZYTKOWNIK WHERE login = p_email;
-    IF v_rola != 'NAUCZYCIEL' THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Tylko nauczyciel moze wstawiac oceny.');
+    SELECT ROLA INTO V_ROLA FROM UZYTKOWNIK WHERE LOGIN = P_EMAIL;
+    IF V_ROLA NOT IN ('NAUCZYCIEL', 'ADMIN') THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Tylko nauczyciel/admin moze wstawiac oceny.');
     END IF;
     
-    select count(*) into v_student_licznik
-    from ocena o
-    join nauczyciel n on n.id = o.nauczyciel_id
-    join student s on s.id = o.student_id
-    where n.email = p_email 
-    and s.id = p_student_id;
+    SELECT COUNT(*) INTO V_STUDENT_LICZNIK
+    FROM OCENA O
+    JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
+    JOIN STUDENT S ON S.ID = O.STUDENT_ID
+    WHERE N.EMAIL = P_EMAIL 
+    AND S.ID = P_STUDENT_ID;
     
-    select count(*) into v_przedmiot_licznik
-    from ocena o
-    join nauczyciel n on n.id = o.nauczyciel_id
-    join student s on s.id = o.student_id
-    where n.email = p_email 
-    and s.id = p_student_id
-    and o.przedmiot_id = p_przedmiot_id;
+    SELECT COUNT(*) INTO V_PRZEDMIOT_LICZNIK
+    FROM OCENA O
+    JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
+    JOIN STUDENT S ON S.ID = O.STUDENT_ID
+    WHERE N.EMAIL = P_EMAIL 
+    AND S.ID = P_STUDENT_ID
+    AND O.PRZEDMIOT_ID = P_PRZEDMIOT_ID;
     
-    IF v_student_licznik = 0 AND v_przedmiot_licznik = 0 THEN
+    IF V_STUDENT_LICZNIK = 0 AND V_PRZEDMIOT_LICZNIK = 0 AND V_ROLA != 'ADMIN' THEN
         RAISE_APPLICATION_ERROR(-20002, 'NAUCZYCIEL NIE UCZY TEGO STUDENTA ANI TEGO PRZEDMIOTU.');
-    ELSIF v_student_licznik = 0 THEN
+    ELSIF V_STUDENT_LICZNIK = 0  AND V_ROLA != 'ADMIN' THEN
         RAISE_APPLICATION_ERROR(-20003, 'NAUCZYCIEL NIE UCZY TEGO STUDENTA.');
-    ELSIF v_przedmiot_licznik = 0 THEN
+    ELSIF V_PRZEDMIOT_LICZNIK = 0  AND V_ROLA != 'ADMIN' THEN
         RAISE_APPLICATION_ERROR(-20004, 'NAUCZYCIEL NIE UCZY TEGO PRZEDMIOTU.');
     END IF;
     -- Pobranie ID nauczyciela na podstawie emaila
-    SELECT id INTO v_nauczyciel_id
-    FROM NAUCZYCIEL
-    WHERE email = p_email;
-
-    IF p_ocena not in (2.0, 3.0, 3.5, 4.0, 4.5, 5.0) THEN
+    IF V_ROLA = 'NAUCZYCIEL' THEN
+        SELECT ID INTO V_NAUCZYCIEL_ID
+        FROM NAUCZYCIEL
+        WHERE EMAIL = P_EMAIL;
+    ELSIF V_ROLA = 'ADMIN' THEN
+        V_NAUCZYCIEL_ID := 0;
+    END IF;
+    IF P_OCENA NOT IN (2.0, 3.0, 3.5, 4.0, 4.5, 5.0) THEN
         RAISE_APPLICATION_ERROR(-20005, 'Ocena musi byc w zakresie 2.0 - 5.0.');
     END IF;
 
-    SELECT NVL(MAX(id), 0) + 1 INTO v_ocena_id FROM OCENA;
+    SELECT NVL(MAX(ID), 0) + 1 INTO V_OCENA_ID FROM OCENA;
 
-    INSERT INTO OCENA (id, student_id, przedmiot_id, nauczyciel_id, wartosc, typ, data_wystawienia)
-    VALUES (v_ocena_id, p_student_id, p_przedmiot_id, v_nauczyciel_id, p_ocena, p_typ, SYSDATE);
+    INSERT INTO OCENA (ID, STUDENT_ID, PRZEDMIOT_ID, NAUCZYCIEL_ID, WARTOSC, TYP, DATA_WYSTAWIENIA)
+    VALUES (V_OCENA_ID, P_STUDENT_ID, P_PRZEDMIOT_ID, V_NAUCZYCIEL_ID, P_OCENA, P_TYP, SYSDATE);
 
-    DBMS_OUTPUT.PUT_LINE('Dodano ocene ID: ' || v_ocena_id);
+    DBMS_OUTPUT.PUT_LINE('Dodano ocene ID: ' || V_OCENA_ID);
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RAISE_APPLICATION_ERROR(-20006, 'Nie znaleziono uzytkownika lub nauczyciela.');
@@ -127,84 +132,3 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20099, 'Blad: ' || SQLERRM);
 END;
 /
-
--- =====================================================
---                PRZYK�?ADOWE WYWO�?ANIA
--- =====================================================
-
---BEGIN pokaz_ranking_przedmiotu(2); END;
---/
---
---BEGIN pokaz_ranking; END;
---/
---
---BEGIN pokaz_oceny_studenta(1); END;
---/
---
---BEGIN
---  pokaz_oceny_studenta(1);
---  dodaj_ocene(101, 1, 2, 5.0, 'Zaliczenie');
---  pokaz_oceny_studenta(1);
---END;
---/
---
---END;
---/
-
-SELECT przedmiot_nazwa, typ, wartosc, data_wystawienia, nauczyciel_imie, nauczyciel_nazwisko
-FROM vw_oceny_szczegoly
-WHERE student_id = 1
-AND EXISTS (
-select 1 
-from nauczyciel n
-where n.email = :email
-)
-ORDER BY przedmiot_nazwa, data_wystawienia;
-
-
-
-select *
-from ocena o
-join nauczyciel n on n.id = o.nauczyciel_id
-join student s on s.id = o.student_id
-where n.email = 'nauczyciel200@example.com';
-group by s.id, przedmiot_id, student, nauczyciel_dane, n.email;
-
-select id, imie, nazwisko from student
-where id in (
-select s.id as id_stud
-from ocena o
-join nauczyciel n on n.id = o.nauczyciel_id
-join student s on s.id = o.student_id
-where n.email = 'nauczyciel200@example.com')
-order by id asc;
---;
-
-select student_id, przedmiot_id, nauczyciel_id, wartosc || ' - ' || typ as ocena, data_wystawienia, imie || ' ' || nazwisko as nauczyciel from ocena o
-join nauczyciel n
-on n.id = o.nauczyciel_id
-where nauczyciel_id = 200;
-
-SELECT 
-    przedmiot_id,
-    round(COUNT(CASE WHEN status = 'niezaliczony' THEN 1 END) * 100 / COUNT(*), 2) || ' %' AS ratio_niezal,
-    round(COUNT(CASE WHEN status = 'zaliczony' THEN 1 END) * 100 / COUNT(*), 2) || ' %' AS "ratio-zaliczony"
-FROM 
-    vw_zaliczenia
-group by przedmiot_id
-order by ratio_niezal desc;
---WHERE 
---    przedmiot_id = 4;
-
-
-select max(przedmiot_id)
-    from ocena o
-    join nauczyciel n on n.id = o.nauczyciel_id
-    join student s on s.id = o.student_id
-    where n.email = 'nauczyciel200@example.com' 
-    and s.id = 1;
-
-explain plan for
-select * from vw_ranking;
-
-select * from table(DBMS_XPLAN.DISPLAY);

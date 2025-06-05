@@ -81,6 +81,7 @@ class OcenyStudentaView(APIView):
     def get(self, request):
         student_id = request.GET.get('student_id')
         user_email = request.user.username
+        user_role = request.user.rola 
 
         if not student_id:
             return Response({"error": "Brak parametru student_id"}, status=status.HTTP_400_BAD_REQUEST)
@@ -91,11 +92,37 @@ class OcenyStudentaView(APIView):
                     SELECT przedmiot_nazwa, typ, wartosc, data_wystawienia, nauczyciel_imie, nauczyciel_nazwisko
                     FROM vw_oceny_szczegoly
                     WHERE student_id = :id
-                    AND nauczyciel_email = :email
+                    AND (
+                        :rola = 'ADMIN' OR
+                        nauczyciel_email = :email OR
+                        student_email = :email
+                    )
                     ORDER BY przedmiot_nazwa, data_wystawienia
-                """, {'id': student_id, 'email': user_email})
+                """, {
+                    'id': student_id,
+                    'email': user_email,
+                    'rola': user_role
+                })
 
                 rows = cursor.fetchall()
+
+                # Obsługa wyjątków po roli
+                if not rows:
+                    if user_role == 'STUDENT':
+                        return Response(
+                            {"error": "Brak dostępu: to nie twoje oceny lub student nie istnieje."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    elif user_role == 'NAUCZYCIEL':
+                        return Response(
+                            {"error": "Brak dostępu: nie uczysz tego studenta lub student nie istnieje."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    else:  # ADMIN
+                        return Response(
+                            {"error": "Brak danych: student nie istnieje lub nie ma ocen."},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
                 results = []
                 for row in rows:
                     results.append({
@@ -146,19 +173,44 @@ class ZaliczeniaZPrzedmiotuView(APIView):
     def get(self, request):
         przedmiot_id = request.GET.get('przedmiot_id')
         user_email = request.user.username
+        user_role = getattr(request.user, 'rola', None)
+
         if not przedmiot_id:
             return Response({"error": "Brak parametru przedmiot_id"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT student, przedmiot, nauczyciel, srednia, status FROM vw_zaliczenia
-                    WHERE przedmiot_id = :id
-                    AND nauczyciel_email =:email
-                    ORDER BY srednia asc
-                """, {'id': przedmiot_id, 'email': user_email})
+                if user_role == 'ADMIN':
+                    cursor.execute("""
+                        SELECT student, przedmiot, nauczyciel, srednia, status
+                        FROM vw_zaliczenia
+                        WHERE przedmiot_id = :id
+                        ORDER BY srednia ASC
+                    """, {'id': przedmiot_id})
+                else:
+                    cursor.execute("""
+                        SELECT student, przedmiot, nauczyciel, srednia, status
+                        FROM vw_zaliczenia
+                        WHERE przedmiot_id = :id AND (nauczyciel_email = :email or student_email = :email)
+                        ORDER BY srednia ASC
+                    """, {'id': przedmiot_id, 'email': user_email})
 
                 rows = cursor.fetchall()
+
+                # Obsługa wyjątków na podstawie roli
+                if not rows:
+                    if user_role == 'NAUCZYCIEL':
+                        return Response(
+                            {"error": "Brak dostępu: nie prowadzisz tego przedmiotu lub brak ocen."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    else:  # ADMIN lub inna rola
+                        return Response(
+                            {"error": "Brak danych: przedmiot nie istnieje lub nie ma ocen."},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                # Przetwarzanie danych
                 results = []
                 for row in rows:
                     results.append({

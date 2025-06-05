@@ -1,0 +1,164 @@
+-- =====================================================
+--                ZAPYTANIA I TESTY
+-- =====================================================
+
+-- =======================================
+-- 🗂 LISTA OBIEKTÓW (tabele, widoki, procedury)
+-- =======================================
+
+-- Lista wszystkich tabel w Twoim schemacie:
+SELECT TABLE_NAME FROM USER_TABLES ORDER BY TABLE_NAME;
+
+-- Lista wszystkich widoków:
+SELECT VIEW_NAME FROM USER_VIEWS ORDER BY VIEW_NAME;
+
+-- Lista wszystkich procedur:
+SELECT OBJECT_NAME FROM USER_OBJECTS
+WHERE OBJECT_TYPE = 'PROCEDURE'
+ORDER BY OBJECT_NAME;
+
+-- Lista wszystkich funkcji:
+SELECT OBJECT_NAME FROM USER_OBJECTS
+WHERE OBJECT_TYPE = 'FUNCTION'
+ORDER BY OBJECT_NAME;
+
+-- Lista wszystkich pakietów:
+SELECT OBJECT_NAME FROM USER_OBJECTS
+WHERE OBJECT_TYPE = 'PACKAGE'
+ORDER BY OBJECT_NAME;
+-- Lista wszystkich widoków:
+SELECT OBJECT_NAME FROM USER_OBJECTS
+WHERE OBJECT_TYPE = 'VIEW'
+ORDER BY OBJECT_NAME;
+-- Lista wszystkich triggerów:
+SELECT TRIGGER_NAME 
+FROM USER_TRIGGERS
+ORDER BY TRIGGER_NAME;
+
+-- =======================================
+-- 📋 DANE W TABELACH (SELECT * FROM ...)
+-- =======================================
+
+-- STUDENT
+SELECT * FROM STUDENT;
+
+-- NAUCZYCIEL
+SELECT * FROM NAUCZYCIEL;
+
+-- PRZEDMIOT
+SELECT * FROM PRZEDMIOT;
+
+-- OCENA
+SELECT * FROM OCENA;
+
+-- UZYTKOWNIK
+SELECT * FROM UZYTKOWNIK;
+
+-- GRUPA
+SELECT * FROM GRUPA;
+
+-- ZAPISY
+SELECT * FROM ZAPISY;
+
+-- =======================================
+-- 👓 DANE Z WIDOKÓW
+-- =======================================
+
+-- Średnie ocen
+SELECT * FROM VW_SREDNIE_OCEN;
+
+-- Ranking
+SELECT * FROM VW_RANKING;
+
+-- Szczegóły ocen
+SELECT * FROM VW_OCENY_SZCZEGOLY;
+
+-- Zaliczenia
+SELECT * FROM VW_ZALICZENIA;
+
+-- =======================================
+--              TESTY RECZNE
+-- =======================================
+
+
+--BEGIN pokaz_ranking_przedmiotu(2); END;
+--/
+--
+--BEGIN pokaz_ranking; END;
+--/
+--
+--BEGIN pokaz_oceny_studenta(1); END;
+--/
+--
+--BEGIN
+--  pokaz_oceny_studenta(1);
+--  dodaj_ocene(101, 1, 2, 5.0, 'Zaliczenie');
+--  pokaz_oceny_studenta(1);
+--END;
+--/
+--
+--END;
+--/
+
+SELECT PRZEDMIOT_NAZWA, TYP, WARTOSC, DATA_WYSTAWIENIA, NAUCZYCIEL_IMIE, NAUCZYCIEL_NAZWISKO
+FROM VW_OCENY_SZCZEGOLY
+WHERE STUDENT_ID = 1
+AND EXISTS (
+SELECT 1 
+FROM NAUCZYCIEL N
+WHERE N.EMAIL = :EMAIL
+)
+ORDER BY PRZEDMIOT_NAZWA, DATA_WYSTAWIENIA;
+
+
+
+SELECT *
+FROM OCENA O
+JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
+JOIN STUDENT S ON S.ID = O.STUDENT_ID
+WHERE N.EMAIL = 'nauczyciel200@example.com';
+GROUP BY S.ID, PRZEDMIOT_ID, STUDENT, NAUCZYCIEL_DANE, N.EMAIL;
+
+SELECT ID, IMIE, NAZWISKO FROM STUDENT
+WHERE ID IN (
+SELECT S.ID AS ID_STUD
+FROM OCENA O
+JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
+JOIN STUDENT S ON S.ID = O.STUDENT_ID
+WHERE N.EMAIL = 'nauczyciel200@example.com')
+ORDER BY ID ASC;
+--;
+
+SELECT STUDENT_ID, PRZEDMIOT_ID, NAUCZYCIEL_ID, WARTOSC || ' - ' || TYP AS OCENA, DATA_WYSTAWIENIA, IMIE || ' ' || NAZWISKO AS NAUCZYCIEL FROM OCENA O
+JOIN NAUCZYCIEL N
+ON N.ID = O.NAUCZYCIEL_ID
+WHERE NAUCZYCIEL_ID = 200;
+
+SELECT 
+    PRZEDMIOT_ID,
+    ROUND(COUNT(CASE WHEN STATUS = 'niezaliczony' THEN 1 END) * 100 / COUNT(*), 2) || ' %' AS RATIO_NIEZAL,
+    ROUND(COUNT(CASE WHEN STATUS = 'zaliczony' THEN 1 END) * 100 / COUNT(*), 2) || ' %' AS "RATIO-ZALICZONY"
+FROM 
+    VW_ZALICZENIA
+GROUP BY PRZEDMIOT_ID
+ORDER BY RATIO_NIEZAL DESC;
+--WHERE 
+--    przedmiot_id = 4;
+
+
+SELECT MAX(PRZEDMIOT_ID)
+    FROM OCENA O
+    JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
+    JOIN STUDENT S ON S.ID = O.STUDENT_ID
+    WHERE N.EMAIL = 'nauczyciel200@example.com' 
+    AND S.ID = 1;
+
+EXPLAIN PLAN FOR
+SELECT * FROM VW_RANKING;
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+SELECT * FROM OCENA
+WHERE NAUCZYCIEL_ID = 200;
+
+SELECT * FROM VW_ZALICZENIA WHERE STUDENT_ID = 70;

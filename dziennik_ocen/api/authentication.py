@@ -5,11 +5,13 @@ from types import SimpleNamespace
 class CustomJWTAuthentication(JWTAuthentication):
     def get_user(self, validated_token):
         username = validated_token.get("username", None)
+        rola = validated_token.get("rola", None)
         if not username:
             return AnonymousUser()
 
         # Tworzymy prosty użytkownik-obiekt, który udaje zalogowanego
         user = SimpleNamespace()
         user.username = username
+        user.rola = rola
         user.is_authenticated = True
         return user
