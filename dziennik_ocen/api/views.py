@@ -1,41 +1,87 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import connection
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import DodajOceneSerializer
+from .serializers import DodajOceneSerializer, LoginSerializer
 from drf_yasg import openapi
 
-class DodajOceneView(APIView):
+class CustomLoginView(APIView):
+    @swagger_auto_schema(request_body=LoginSerializer)
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-    @swagger_auto_schema(request_body=DodajOceneSerializer)
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT hashuj_haslo(:password) FROM dual", {'password': password})
+                hashed_pw = cursor.fetchone()[0]
+
+                cursor.execute("""
+                    SELECT id, rola FROM UZYTKOWNIK 
+                    WHERE login = :username AND haslo = :hashed
+                """, {'username': username, 'hashed': hashed_pw})
+
+                result = cursor.fetchone()
+                if result:
+                    user_id, rola = result
+                    token = RefreshToken()
+                    token['rola'] = rola
+                    token['username'] = username
+                    return Response({
+                        'access': str(token.access_token),
+                        'refresh': str(token)
+                    }, status=200)
+                else:
+                    return Response({'error': 'Nieprawidłowe dane logowania'}, status=401)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+class DodajOceneView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=DodajOceneSerializer, security=[{'Bearer': []}])
     def post(self, request):
         serializer = DodajOceneSerializer(data=request.data)
-        if serializer.is_valid():
-            data = serializer.validated_data
-            try:
-                with connection.cursor() as cursor:
-                    cursor.callproc("dodaj_ocene", [
-                        data['user_id'],
-                        data['student_id'],
-                        data['przedmiot_id'],
-                        data['ocena'],
-                        data['typ']
-                    ])
-                return Response({"message": "Ocena została dodana."}, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+
+        user_email = request.user.username
+        student_id = serializer.validated_data["student_id"]
+        przedmiot_id = serializer.validated_data["przedmiot_id"]
+        ocena = serializer.validated_data["ocena"]
+        typ = serializer.validated_data["typ"]
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('dodaj_ocene', [
+                    user_email,
+                    student_id,
+                    przedmiot_id,
+                    ocena,
+                    typ
+                ])
+            return Response({"message": "Ocena dodana."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class OcenyStudentaView(APIView):
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('student_id', openapi.IN_QUERY, description="ID studenta", type=openapi.TYPE_INTEGER)
-        ]
+        ],
+        security=[{'Bearer': []}]
     )
     def get(self, request):
         student_id = request.GET.get('student_id')
+        user_email = request.user.username
+
         if not student_id:
             return Response({"error": "Brak parametru student_id"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -45,8 +91,9 @@ class OcenyStudentaView(APIView):
                     SELECT przedmiot_nazwa, typ, wartosc, data_wystawienia, nauczyciel_imie, nauczyciel_nazwisko
                     FROM vw_oceny_szczegoly
                     WHERE student_id = :id
+                    AND nauczyciel_email = :email
                     ORDER BY przedmiot_nazwa, data_wystawienia
-                """, {'id': student_id})
+                """, {'id': student_id, 'email': user_email})
 
                 rows = cursor.fetchall()
                 results = []
