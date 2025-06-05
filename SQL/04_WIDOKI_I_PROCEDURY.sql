@@ -38,6 +38,7 @@ SELECT
     s.id AS student_id,
     s.imie || ' ' || s.nazwisko AS student,
     p.id AS przedmiot_id,
+    n.imie || ' ' || n.nazwisko AS nauczyciel,
     p.nazwa AS przedmiot,
     ROUND(AVG(o.wartosc), 2) AS srednia,
     CASE
@@ -47,7 +48,8 @@ SELECT
 FROM OCENA o
 JOIN STUDENT s ON s.id = o.student_id
 JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
-GROUP BY s.id, s.imie, s.nazwisko, p.id, p.nazwa;
+JOIN NAUCZYCIEL n ON n.id = o.nauczyciel_id
+GROUP BY s.id, s.imie, s.nazwisko, n.imie, n.nazwisko, p.id, p.nazwa;
 
 CREATE OR REPLACE VIEW vw_ranking AS
 SELECT
@@ -75,7 +77,7 @@ CREATE OR REPLACE PROCEDURE dodaj_ocene (
 BEGIN
     SELECT rola INTO v_rola FROM UZYTKOWNIK WHERE id = p_user_id;
     IF v_rola != 'NAUCZYCIEL' THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Tylko nauczyciel może wystawiać oceny.');
+        RAISE_APPLICATION_ERROR(-20001, 'Tylko nauczyciel moze wstawiac oceny.');
     END IF;
 
     SELECT n.id INTO v_nauczyciel_id
@@ -83,8 +85,8 @@ BEGIN
     JOIN UZYTKOWNIK u ON u.login = n.email
     WHERE u.id = p_user_id;
 
-    IF p_ocena < 2.0 OR p_ocena > 5.0 THEN
-        RAISE_APPLICATION_ERROR(-20002, 'Ocena musi być w zakresie 2.0–5.0.');
+    IF p_ocena not in (2.0, 3.0, 3.5, 4.0, 4.5, 5.0) THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Ocena musi byc w zakresie 2.0 - 5.0.');
     END IF;
 
     SELECT NVL(MAX(id), 0) + 1 INTO v_ocena_id FROM OCENA;
@@ -92,17 +94,17 @@ BEGIN
     INSERT INTO OCENA (id, student_id, przedmiot_id, nauczyciel_id, wartosc, typ, data_wystawienia)
     VALUES (v_ocena_id, p_student_id, p_przedmiot_id, v_nauczyciel_id, p_ocena, p_typ, SYSDATE);
 
-    DBMS_OUTPUT.PUT_LINE('Dodano ocenę ID: ' || v_ocena_id);
+    DBMS_OUTPUT.PUT_LINE('Dodano ocene ID: ' || v_ocena_id);
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20003, 'Nie znaleziono użytkownika lub nauczyciela.');
+        RAISE_APPLICATION_ERROR(-20003, 'Nie znaleziono uzytkownika lub nauczyciela.');
     WHEN OTHERS THEN
-        RAISE_APPLICATION_ERROR(-20099, 'Błąd: ' || SQLERRM);
+        RAISE_APPLICATION_ERROR(-20099, 'Blad: ' || SQLERRM);
 END;
 /
 
 -- =====================================================
---                PRZYKŁADOWE WYWOŁANIA
+--                PRZYK�?ADOWE WYWO�?ANIA
 -- =====================================================
 
 --BEGIN pokaz_ranking_przedmiotu(2); END;
@@ -123,3 +125,22 @@ END;
 --
 --END;
 --/
+
+
+
+SELECT 
+    przedmiot_id,
+    round(COUNT(CASE WHEN status = 'niezaliczony' THEN 1 END) * 100 / COUNT(*), 2) || ' %' AS ratio_niezal,
+    round(COUNT(CASE WHEN status = 'zaliczony' THEN 1 END) * 100 / COUNT(*), 2) || ' %' AS "ratio-zaliczony"
+FROM 
+    vw_zaliczenia
+group by przedmiot_id
+order by ratio_niezal desc;
+--WHERE 
+--    przedmiot_id = 4;
+
+
+explain plan for
+select * from vw_ranking;
+
+select * from table(DBMS_XPLAN.DISPLAY);

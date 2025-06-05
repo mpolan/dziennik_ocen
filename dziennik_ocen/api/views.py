@@ -87,3 +87,39 @@ class OgolnyRankingOcenView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class ZaliczeniaZPrzedmiotuView(APIView):
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('przedmiot_id', openapi.IN_QUERY, description="ID przedmiotu", type=openapi.TYPE_INTEGER)
+        ]
+    )
+    def get(self, request):
+        przedmiot_id = request.GET.get('przedmiot_id')
+        if not przedmiot_id:
+            return Response({"error": "Brak parametru przedmiot_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT student, przedmiot, nauczyciel, srednia, status FROM vw_zaliczenia
+                    WHERE przedmiot_id = :id
+                    ORDER BY srednia asc
+                """, {'id': przedmiot_id})
+
+                rows = cursor.fetchall()
+                results = []
+                for row in rows:
+                    results.append({
+                        'Student': row[0],
+                        'Przedmiot': row[1],
+                        'Prowadzacy': row[2],
+                        'Średnia': row[3],
+                        'Status': row[4]
+                    })
+
+            return Response(results)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
