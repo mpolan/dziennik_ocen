@@ -1,7 +1,6 @@
 -- ===================================
 --        WIDOKI + PROCEDURY API
 -- ===================================
-
 -- Widoki używane w GET
 CREATE OR REPLACE VIEW vw_srednie_ocen AS
 SELECT
@@ -41,6 +40,7 @@ SELECT
     p.id AS przedmiot_id,
     n.imie || ' ' || n.nazwisko AS nauczyciel,
     p.nazwa AS przedmiot,
+    n.email as nauczyciel_email,
     ROUND(AVG(o.wartosc), 2) AS srednia,
     CASE
         WHEN AVG(o.wartosc) >= 3.0 THEN 'zaliczony'
@@ -50,7 +50,7 @@ FROM OCENA o
 JOIN STUDENT s ON s.id = o.student_id
 JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
 JOIN NAUCZYCIEL n ON n.id = o.nauczyciel_id
-GROUP BY s.id, s.imie, s.nazwisko, n.imie, n.nazwisko, p.id, p.nazwa;
+GROUP BY s.id, s.imie, s.nazwisko, n.imie, n.nazwisko, p.id, p.nazwa, n.email;
 
 CREATE OR REPLACE VIEW vw_ranking AS
 SELECT

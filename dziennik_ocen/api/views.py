@@ -140,10 +140,12 @@ class ZaliczeniaZPrzedmiotuView(APIView):
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('przedmiot_id', openapi.IN_QUERY, description="ID przedmiotu", type=openapi.TYPE_INTEGER)
-        ]
+        ],
+        security=[{'Bearer': []}]
     )
     def get(self, request):
         przedmiot_id = request.GET.get('przedmiot_id')
+        user_email = request.user.username
         if not przedmiot_id:
             return Response({"error": "Brak parametru przedmiot_id"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -152,8 +154,9 @@ class ZaliczeniaZPrzedmiotuView(APIView):
                 cursor.execute("""
                     SELECT student, przedmiot, nauczyciel, srednia, status FROM vw_zaliczenia
                     WHERE przedmiot_id = :id
+                    AND nauczyciel_email =:email
                     ORDER BY srednia asc
-                """, {'id': przedmiot_id})
+                """, {'id': przedmiot_id, 'email': user_email})
 
                 rows = cursor.fetchall()
                 results = []
