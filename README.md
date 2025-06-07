@@ -8,11 +8,13 @@ Kompletny projekt systemu oceniania studentów, oparty na Oracle i Django REST F
 
 | Plik                          | Opis |
 |-------------------------------|------|
-| `00_CZYSTKA_BAZY.sql`         | Skrypt do całkowitego usunięcia obiektów w bazie |
-| `01_CREATE_USER_ADMIN.sql`    | Tworzy potrzebnego user'a admina |
+| `00_CREATE_USER_ADMIN.sql`    | Tworzy potrzebnego user'a admina |
+| `01_CZYSTKA_BAZY.sql`         | Skrypt do całkowitego usunięcia obiektów w bazie |
 | `02_STRUKTURA_BAZY.sql`       | Tworzy wszystkie tabele i relacje |
-| `03_INSERTY_I_TRIGGERY.sql`   | Zawiera triggery, funkcję `hashuj_haslo`, dane testowe |
-| `04_WIDOKI_I_PROCEDURY.sql`   | Widoki do GET API i procedura `dodaj_ocene` do POST |
+| `03_TRIGGERY_I_FUNKCJE_PRZED_INSERT.sql`   | Zawiera triggery, funkcję `hashuj_haslo` |
+| `04_INSERTY.sql`       | Zawiera dane testowe |
+| `05_WIDOKI_I_PROCEDURY.sql`   | Widoki do GET API i m.in. procedura `dodaj_ocene` do POST |
+| `06_ZAPYTANIA_I_TESTY.sql`       | Zbiór testowych zapytań do testowania poprawności działania widoków/procedur itd |
 
 ---
 
