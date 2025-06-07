@@ -59,30 +59,18 @@ Host: localhost
 Port: 1521
 Service Name: ORCLPDB1
 ```
-
 ---
 
-### 2. [Opcjonalnie] Wyczyść starą bazę
-
-W SQL Developerze otwórz i uruchom (F5):
-
-```sql
-00_CZYSTKA_BAZY.sql
-```
-
----
-
-### 3. Utwórz użytkownika `admin`
+### 2. [Opcjonalnie] Utwórz użytkownika `admin`
 
 Jako SYS, uruchom:
 
 ```sql
-01_CREATE_USER_ADMIN.sql
+00_CREATE_USER_ADMIN.sql
 ```
-
 ---
 
-### 4. Zaloguj się ponownie jako `admin`
+### 3. Zaloguj się ponownie jako `admin`
 
 **Nowe połączenie w SQL Developerze:**
 ```
@@ -92,7 +80,14 @@ Host: localhost
 Port: 1521
 Service Name: ORCLPDB1
 ```
+---
 
+### 4. [Opcjonalnie] Wyczyść starą bazę
+Zalogowany jako `admin',w SQL Developerze otwórz i uruchom (F5):
+
+```sql
+01_CZYSTKA_BAZY.sql
+```
 ---
 
 ### 5. Utwórz strukturę bazy:
@@ -105,31 +100,45 @@ Zalogowany jako `admin`, uruchom kolejno:
 
 ---
 
-### 6. Dodaj triggery i dane testowe:
+### 6. Dodaj triggery :
 
 ```sql
-03_INSERTY_I_TRIGGERY.sql
+03_TRIGGERY_I_FUNKCJE_PRZED_INSERT.sql
 ```
 
 ---
 
-### 7. Dodaj widoki i procedury:
+### 7. Dodaj dane testowe:
 
 ```sql
-04_WIDOKI_I_PROCEDURY.sql
+04_INSERTY.sql
+```
+---
+
+### 8. Dodaj widoki i procedury:
+
+```sql
+05_WIDOKI_I_PROCEDURY.sql
 ```
 
 ---
+### 9. [Opcjonalne] Przetestuj dane:
+Uruchom plik:
+```sql
+06_ZAPYTANIA_I_TESTY.sql
+```
+Na górze są dostępne przykładowe select'y.
+---
 
-### 8. Uruchom serwer:
-
+### 10. Uruchom serwer:
 ```bash
+cd dziennik_ocen
 python manage.py runserver
 ```
 
 ---
 
-### 9. Otwórz Swagger
+### 11. Otwórz Swagger
 
 Wejdź w przeglądarce na:
 
