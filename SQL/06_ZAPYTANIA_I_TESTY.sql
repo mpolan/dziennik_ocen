@@ -100,6 +100,9 @@ SELECT * FROM VW_ZALICZENIA;
 --END;
 --/
 
+select * from uzytkownik
+where rola = 'NAUCZYCIEL';
+select * from nauczyciel;
 SELECT PRZEDMIOT_NAZWA, TYP, WARTOSC, DATA_WYSTAWIENIA, NAUCZYCIEL_IMIE, NAUCZYCIEL_NAZWISKO
 FROM VW_OCENY_SZCZEGOLY
 WHERE STUDENT_ID = 1
@@ -111,12 +114,21 @@ WHERE N.EMAIL = :EMAIL
 ORDER BY PRZEDMIOT_NAZWA, DATA_WYSTAWIENIA;
 
 
+select przedmiot_id, count(*) as ilosc_stud from zapisy
+group by przedmiot_id
+order by przedmiot_id;
 
-SELECT *
+SELECT grupa_id, COUNT(DISTINCT student_id) AS liczba_studentow
+FROM zapisy
+GROUP BY grupa_id
+ORDER BY grupa_id;
+
+
+SELECT count(*)
 FROM OCENA O
 JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
 JOIN STUDENT S ON S.ID = O.STUDENT_ID
-WHERE N.EMAIL = 'nauczyciel200@example.com';
+WHERE N.EMAIL = 'nauczyciel201@example.com';
 GROUP BY S.ID, PRZEDMIOT_ID, STUDENT, NAUCZYCIEL_DANE, N.EMAIL;
 
 SELECT ID, IMIE, NAZWISKO FROM STUDENT
@@ -158,7 +170,26 @@ SELECT * FROM VW_RANKING;
 
 SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
 
-SELECT * FROM OCENA
-WHERE NAUCZYCIEL_ID = 200;
+SELECT count(distinct(student_id)) FROM OCENA
+group by nauczyciel_id;
+WHERE STUDENT_ID = 33;
 
 SELECT * FROM VW_ZALICZENIA WHERE STUDENT_ID = 70;
+
+select * from zaliczenie
+where student_id = 1;
+
+select nauczyciel_id, count(distinct(student_id)) as ilosc_stud from ocena
+group by nauczyciel_id
+order by nauczyciel_id;
+
+EXPLAIN PLAN FOR
+SELECT * FROM OCENA WHERE STUDENT_ID = 1;
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+update ocena set
+wartosc = 2.0
+where id = 2;
+select * from log_zmian
+order by id desc;

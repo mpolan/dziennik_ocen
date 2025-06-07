@@ -132,3 +132,30 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20099, 'Blad: ' || SQLERRM);
 END;
 /
+
+CREATE OR REPLACE PROCEDURE SPRAWDZ_ZALICZENIA(
+  p_student_id   IN NUMBER,
+  p_przedmiot_id IN NUMBER
+) IS
+  v_srednia NUMBER;
+  v_status VARCHAR2(20);
+BEGIN
+  SELECT AVG(wartosc)
+  INTO v_srednia
+  FROM OCENA
+  WHERE student_id = p_student_id
+    AND przedmiot_id = p_przedmiot_id;
+
+  v_status := CASE WHEN v_srednia >= 3.0 THEN 'zaliczony' ELSE 'niezaliczony' END;
+
+  MERGE INTO ZALICZENIE z
+  USING dual
+  ON (z.student_id = p_student_id AND z.przedmiot_id = p_przedmiot_id)
+  WHEN MATCHED THEN
+    UPDATE SET STATUS = v_status, DATA_ZALICZENIA = SYSDATE
+  WHEN NOT MATCHED THEN
+    INSERT (ID, STUDENT_ID, PRZEDMIOT_ID, STATUS, DATA_ZALICZENIA)
+    VALUES (ZALICZENIE_SEQ.NEXTVAL, p_student_id, p_przedmiot_id, v_status, SYSDATE);
+END;
+/
+
