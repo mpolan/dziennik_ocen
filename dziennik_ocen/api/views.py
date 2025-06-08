@@ -52,6 +52,7 @@ class DodajOceneView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user_email = request.user.username
+    
         student_id = serializer.validated_data["student_id"]
         przedmiot_id = serializer.validated_data["przedmiot_id"]
         ocena = serializer.validated_data["ocena"]
@@ -85,6 +86,8 @@ class OcenyStudentaView(APIView):
 
         if not student_id:
             return Response({"error": "Brak parametru student_id"}, status=status.HTTP_400_BAD_REQUEST)
+        if user_role is None:
+            return Response({"error": "Brak autoryzcji: Zaloguj się za pomocą klucza API."}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             with connection.cursor() as cursor:
@@ -110,17 +113,17 @@ class OcenyStudentaView(APIView):
                 if not rows:
                     if user_role == 'STUDENT':
                         return Response(
-                            {"error": "Brak dostępu: to nie twoje oceny lub student nie istnieje."},
-                            status=status.HTTP_403_FORBIDDEN
+                            {"error": "Brak danych: To nie twoje oceny lub student o podanym ID nie istnieje."},
+                            status=status.HTTP_404_NOT_FOUND
                         )
                     elif user_role == 'NAUCZYCIEL':
                         return Response(
-                            {"error": "Brak dostępu: nie uczysz tego studenta lub student nie istnieje."},
-                            status=status.HTTP_403_FORBIDDEN
+                            {"error": "Brak danych: Nie uczysz tego studenta lub student o podanym ID nie istnieje."},
+                            status=status.HTTP_404_NOT_FOUND
                         )
                     else:  # ADMIN
                         return Response(
-                            {"error": "Brak danych: student nie istnieje lub nie ma ocen."},
+                            {"error": "Brak danych: Student o podanym ID nie istnieje lub nie ma ocen."},
                             status=status.HTTP_404_NOT_FOUND
                         )
                 results = []
@@ -132,8 +135,21 @@ class OcenyStudentaView(APIView):
                         'Prowadzacy': f"{row[4]} {row[5]}",
                         'Data Wystawienia': row[3]
                     })
+                # Średnia
+                cursor.execute("""
+                    SELECT ROUND(AVG(wartosc), 2) FROM VW_OCENY_SZCZEGOLY
+                    WHERE student_id = :id
+                """, {'id': student_id})
 
-            return Response(results)
+                srednia = cursor.fetchone()
+                srednia = {
+                    'Średnia ocen': srednia[0]
+                }
+
+            return Response({
+                'Średnia': srednia,
+                'Oceny': results
+            })
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -145,7 +161,7 @@ class OgolnyRankingOcenView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT pozycja, student_imie, student_nazwisko, srednia
-                    FROM vw_ranking
+                    FROM vw_ranking_ogolny
                 """)
 
                 rows = cursor.fetchall()
@@ -155,6 +171,55 @@ class OgolnyRankingOcenView(APIView):
                         'Pozycja': row[0],
                         'Student': f"{row[1]} {row[2]}",
                         'Średnia Ocen': row[3]
+                    })
+
+            return Response(results)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class RankingPrzedmiotowView(APIView):
+    @swagger_auto_schema(operation_summary="Pobierz ranking z przedmiotow wg średniej ocen")
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pozycja, przedmiot_nazwa, nauczyciel_dane, srednia
+                    FROM vw_ranking_przedmiotow
+                """)
+
+                rows = cursor.fetchall()
+                results = []
+                for row in rows:
+                    results.append({
+                        'Pozycja': row[0],
+                        'Przedmiot': row[1],
+                        'Nauczyciel': row[2],
+                        'Średnia': row[3]
+                    })
+
+            return Response(results)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class RankingGrupView(APIView):
+    @swagger_auto_schema(operation_summary="Pobierz ranking z grup wg średniej ocen")
+    def get(self, request):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pozycja, grupa_dane, srednia
+                    FROM vw_ranking_grup
+                """)
+
+                rows = cursor.fetchall()
+                results = []
+                for row in rows:
+                    results.append({
+                        'Pozycja': row[0],
+                        'Grupa': row[1],
+                        'Średnia': row[2]
                     })
 
             return Response(results)
@@ -177,6 +242,8 @@ class ZaliczeniaZPrzedmiotuView(APIView):
 
         if not przedmiot_id:
             return Response({"error": "Brak parametru przedmiot_id"}, status=status.HTTP_400_BAD_REQUEST)
+        if user_role is None:
+            return Response({"error": "Brak autoryzcji: Zaloguj się za pomocą klucza API."}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             with connection.cursor() as cursor:
@@ -201,16 +268,20 @@ class ZaliczeniaZPrzedmiotuView(APIView):
                 if not rows:
                     if user_role == 'NAUCZYCIEL':
                         return Response(
-                            {"error": "Brak dostępu: nie prowadzisz tego przedmiotu lub brak ocen."},
+                            {"error": "Brak dostępu: Nie prowadzisz tego przedmiotu lub nie ma on ocen."},
                             status=status.HTTP_403_FORBIDDEN
                         )
-                    else:  # ADMIN lub inna rola
+                    elif user_role == 'STUDENT':
                         return Response(
-                            {"error": "Brak danych: przedmiot nie istnieje lub nie ma ocen."},
+                            {"error": "Brak dostępu: Nie uczestniczysz w tym przedmiocie, lub on nie istnieje."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    else:
+                        return Response(
+                            {"error": "Brak danych: Przedmiot nie istnieje lub nie ma ocen."},
                             status=status.HTTP_404_NOT_FOUND
                         )
 
-                # Przetwarzanie danych
                 results = []
                 for row in rows:
                     results.append({
@@ -221,7 +292,28 @@ class ZaliczeniaZPrzedmiotuView(APIView):
                         'Status': row[4]
                     })
 
-            return Response(results)
+                # Statystyka zaliczeń
+                cursor.execute("""
+                    SELECT
+                        COUNT(*) AS liczba_wszystkich,
+                        SUM(CASE WHEN status = 'zaliczony' THEN 1 ELSE 0 END) AS liczba_zaliczonych,
+                        SUM(CASE WHEN status = 'niezaliczony' THEN 1 ELSE 0 END) AS liczba_niezaliczonych
+                    FROM vw_zaliczenia
+                    WHERE przedmiot_id = :id
+                """, {'id': przedmiot_id})
+
+                stat_row = cursor.fetchone()
+                statystyki = {
+                    'Liczba wszystkich studentów': stat_row[0],
+                    'Zaliczonych': stat_row[1],
+                    'Niezaliczonych': stat_row[2]
+                }
+
+            return Response({
+                'Statystyki': statystyki,
+                'Lista Zaliczeń': results
+            })
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+

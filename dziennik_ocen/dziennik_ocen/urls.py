@@ -39,9 +39,3 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
 
-from api.views import CustomLoginView
-
-urlpatterns += [
-    path('api/custom-login/', CustomLoginView.as_view(), name='custom_login'),
-]
-

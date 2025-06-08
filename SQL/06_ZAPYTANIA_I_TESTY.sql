@@ -67,9 +67,12 @@ SELECT * FROM ZAPISY;
 -- Średnie ocen
 SELECT * FROM VW_SREDNIE_OCEN;
 
--- Ranking
-SELECT * FROM VW_RANKING;
+-- Rankingi
+SELECT * FROM VW_RANKING_OGOLNY;
 
+SELECT * FROM VW_RANKING_PRZEDMIOTOW;
+
+SELECT * FROM VW_RANKING_GRUP;
 -- Szczegóły ocen
 SELECT * FROM VW_OCENY_SZCZEGOLY;
 
@@ -193,3 +196,82 @@ wartosc = 2.0
 where id = 2;
 select * from log_zmian
 order by id desc;
+/
+
+
+SELECT
+    S.ID AS STUDENT_ID,
+    S.IMIE AS STUDENT_IMIE,
+    S.NAZWISKO AS STUDENT_NAZWISKO,
+    ROUND(AVG(O.WARTOSC), 2) AS SREDNIA,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA
+FROM STUDENT S
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+GROUP BY S.ID, S.IMIE, S.NAZWISKO;
+
+select
+    round(avg(wartosc),2) as srednia,
+    z.grupa_id
+from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+JOIN nauczyciel n on o.nauczyciel_ID = n.id
+join zapisy z on s.id = z.student_id
+group by grupa_id;
+
+select sum(wartosc), count(*) from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+JOIN nauczyciel n on o.nauczyciel_ID = n.id
+join zapisy z on s.id = z.student_id
+where grupa_id = 6;
+-- 3.671
+-- 4.015
+select 
+    round(avg(wartosc),2) as srednia, 
+    p.nazwa,
+    n.imie || ' ' || n.nazwisko as nauczyciel_dane,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA 
+from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+JOIN nauczyciel n on o.nauczyciel_ID = n.id
+join przedmiot p on o.przedmiot_id = p.id
+group by przedmiot_id, n.imie, n.nazwisko, p.nazwa;
+
+select
+    round(avg(wartosc),2) as srednia,
+    z.grupa_id,
+    n.imie, n.nazwisko,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA 
+from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+JOIN nauczyciel n on o.nauczyciel_ID = n.id
+join zapisy z on s.id = z.student_id
+group by grupa_id, n.imie, n.nazwisko;
+
+
+SELECT DISTINCT
+    n.id AS nauczyciel_id,
+    n.imie || ' ' || n.nazwisko AS nauczyciel,
+    g.id AS grupa_id,
+    g.nazwa AS grupa_nazwa,
+    p.nazwa AS przedmiot
+FROM
+    NAUCZYCIEL n
+JOIN OCENA o ON o.nauczyciel_id = n.id
+JOIN STUDENT s ON s.id = o.student_id
+JOIN ZAPISY z ON z.student_id = s.id AND z.przedmiot_id = o.przedmiot_id
+JOIN GRUPA g ON g.id = z.grupa_id
+JOIN PRZEDMIOT p ON p.id = o.przedmiot_id
+ORDER BY nauczyciel_id;
+
+SELECT
+    n.id AS nauczyciel_id,
+    n.imie || ' ' || n.nazwisko AS nauczyciel,
+    COUNT(DISTINCT g.id) AS liczba_grup
+FROM
+    NAUCZYCIEL n
+JOIN OCENA o ON o.nauczyciel_id = n.id
+JOIN STUDENT s ON s.id = o.student_id
+JOIN ZAPISY z ON z.student_id = s.id AND z.przedmiot_id = o.przedmiot_id
+JOIN GRUPA g ON g.id = z.grupa_id
+GROUP BY n.id, n.imie, n.nazwisko
+ORDER BY liczba_grup DESC;

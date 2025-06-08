@@ -47,10 +47,9 @@ for i in range(1, liczba_studentow + 1):
 
 # NAUCZYCIELE
 output_lines.append("\n-- NAUCZYCIEL")
-output_lines.append("INSERT INTO NAUCZYCIEL VALUES(201, 'Nauczyciel1', 'Nazwisko1', 'nauczyciel1@example.com', 'Mgr');")
-for i in range(2, liczba_nauczycieli + 1):
+for i in range(200, liczba_nauczycieli + 201):
     r = random.randint(0, 2)
-    output_lines.append(f"INSERT INTO NAUCZYCIEL VALUES({200+i}, 'Nauczyciel{i}', 'Nazwisko{i}', 'nauczyciel{i}@example.com', '{tytuly[r]}');")
+    output_lines.append(f"INSERT INTO NAUCZYCIEL VALUES({i}, 'Nauczyciel{i}', 'Nazwisko{i}', 'nauczyciel{i}@example.com', '{tytuly[r]}');")
 
 # PRZEDMIOTY
 output_lines.append("\n-- PRZEDMIOT")
