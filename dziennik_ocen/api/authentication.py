@@ -9,7 +9,6 @@ class CustomJWTAuthentication(JWTAuthentication):
         if not username:
             return AnonymousUser()
 
-        # Tworzymy prosty użytkownik-obiekt, który udaje zalogowanego
         user = SimpleNamespace()
         user.username = username
         user.rola = rola

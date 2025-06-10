@@ -303,8 +303,35 @@ commit;
 SELECT * FROM VW_OCENY_SZCZEGOLY
 where student_id = 49;
 
-select * from ocena
+select * from ocena;
 where nauczyciel_id = 200;
 
 select * from nauczyciel;
 select * from vw_oceny_szczegoly;
+
+
+drop table ocena_k;
+CREATE TABLE OCENA_K AS
+SELECT
+    ROWNUM AS ID,
+    o.student_id,
+    o.przedmiot_id,
+    o.nauczyciel_id,
+    o.wartosc,
+    o.typ,
+    o.data_wystawienia
+FROM ocena o
+CROSS JOIN (
+  SELECT LEVEL AS n FROM dual CONNECT BY LEVEL <= 95630 -- ~60916310 rekordów
+);
+
+select count(*) from ocena_k;
+
+CREATE INDEX idx_ocena_k_student ON OCENA_k(STUDENT_ID);
+
+--drop INDEX idx_ocena_k_student;
+
+explain plan for
+select * from ocena_k where student_id = 1;
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
