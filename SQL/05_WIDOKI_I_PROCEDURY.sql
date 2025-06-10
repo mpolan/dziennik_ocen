@@ -54,7 +54,7 @@ JOIN PRZEDMIOT P ON P.ID = O.PRZEDMIOT_ID
 JOIN NAUCZYCIEL N ON N.ID = O.NAUCZYCIEL_ID
 GROUP BY S.ID, S.IMIE, S.NAZWISKO, N.IMIE, N.NAZWISKO, P.ID, P.NAZWA, N.EMAIL, S.EMAIL;
 
-CREATE OR REPLACE VIEW VW_RANKING AS
+CREATE OR REPLACE VIEW VW_RANKING_OGOLNY AS
 SELECT
     S.ID AS STUDENT_ID,
     S.IMIE AS STUDENT_IMIE,
@@ -65,6 +65,29 @@ FROM STUDENT S
 JOIN OCENA O ON S.ID = O.STUDENT_ID
 GROUP BY S.ID, S.IMIE, S.NAZWISKO;
 
+create or replace view vw_ranking_przedmiotow as
+select 
+    round(avg(wartosc),2) as srednia, 
+    p.nazwa as przedmiot_nazwa,
+    n.imie || ' ' || n.nazwisko as nauczyciel_dane,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA 
+from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+JOIN nauczyciel n on o.nauczyciel_ID = n.id
+join przedmiot p on o.przedmiot_id = p.id
+where n.imie <> 'SYSTEM'
+group by przedmiot_id, n.imie, n.nazwisko, p.nazwa;
+
+create or replace view vw_ranking_grup as
+select
+    round(avg(wartosc),2) as srednia,
+    g.nazwa as grupa_dane,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA 
+from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+join zapisy z on s.id = z.student_id
+join grupa g on z.grupa_id = g.id
+group by g.nazwa;
 
 -- Procedura do POST /dodaj-ocene
 CREATE OR REPLACE PROCEDURE DODAJ_OCENE (
@@ -123,7 +146,9 @@ BEGIN
 
     INSERT INTO OCENA (ID, STUDENT_ID, PRZEDMIOT_ID, NAUCZYCIEL_ID, WARTOSC, TYP, DATA_WYSTAWIENIA)
     VALUES (V_OCENA_ID, P_STUDENT_ID, P_PRZEDMIOT_ID, V_NAUCZYCIEL_ID, P_OCENA, P_TYP, SYSDATE);
-
+    
+    ZALOGUJ_ZMIANE(P_EMAIL, 'OCENA', 'INSERT', V_OCENA_ID);
+    
     DBMS_OUTPUT.PUT_LINE('Dodano ocene ID: ' || V_OCENA_ID);
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
@@ -132,30 +157,90 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20099, 'Blad: ' || SQLERRM);
 END;
 /
-
-CREATE OR REPLACE PROCEDURE SPRAWDZ_ZALICZENIA(
-  p_student_id   IN NUMBER,
-  p_przedmiot_id IN NUMBER
+-- Procedura aktualizowania oceny:
+CREATE OR REPLACE PROCEDURE AKTUALIZUJ_OCENE (
+    p_email     IN VARCHAR2,
+    p_ocena_id  IN NUMBER,
+    p_nowa      IN NUMBER
 ) IS
-  v_srednia NUMBER;
-  v_status VARCHAR2(20);
+    v_user_rola      VARCHAR2(20);
+    v_nauczyciel_id  NUMBER;
+    v_autor_oceny_id NUMBER;
+    v_stara          NUMBER;
 BEGIN
-  SELECT AVG(wartosc)
-  INTO v_srednia
-  FROM OCENA
-  WHERE student_id = p_student_id
-    AND przedmiot_id = p_przedmiot_id;
+    -- Pobranie roli użytkownika
+    SELECT rola INTO v_user_rola FROM uzytkownik WHERE login = p_email;
 
-  v_status := CASE WHEN v_srednia >= 3.0 THEN 'zaliczony' ELSE 'niezaliczony' END;
+    -- Jeśli użytkownik to nauczyciel, pobierz jego ID
+    IF v_user_rola = 'NAUCZYCIEL' THEN
+        SELECT id INTO v_nauczyciel_id FROM nauczyciel WHERE email = p_email;
+    END IF;
 
-  MERGE INTO ZALICZENIE z
-  USING dual
-  ON (z.student_id = p_student_id AND z.przedmiot_id = p_przedmiot_id)
-  WHEN MATCHED THEN
-    UPDATE SET STATUS = v_status, DATA_ZALICZENIA = SYSDATE
-  WHEN NOT MATCHED THEN
-    INSERT (ID, STUDENT_ID, PRZEDMIOT_ID, STATUS, DATA_ZALICZENIA)
-    VALUES (ZALICZENIE_SEQ.NEXTVAL, p_student_id, p_przedmiot_id, v_status, SYSDATE);
+    -- Pobierz dane z oceny
+    SELECT nauczyciel_id, wartosc INTO v_autor_oceny_id, v_stara FROM ocena WHERE id = p_ocena_id;
+
+    -- Walidacja dostępu
+    IF v_user_rola != 'ADMIN' AND v_autor_oceny_id != v_nauczyciel_id THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Nie masz uprawnień do edycji tej oceny.');
+    END IF;
+
+    -- Walidacja wartości
+    IF p_nowa NOT IN (2.0, 3.0, 3.5, 4.0, 4.5, 5.0) THEN
+        RAISE_APPLICATION_ERROR(-20011, 'Niepoprawna wartość oceny.');
+    END IF;
+
+    -- Aktualizacja
+    UPDATE ocena SET wartosc = p_nowa WHERE id = p_ocena_id;
+
+    -- Historia zmian
+    INSERT INTO historia_ocen (
+        id, ocena_id, stara_wartosc, nowa_wartosc, zmienil_user_id, data_zmiany
+    ) VALUES (
+        historia_ocen_seq.NEXTVAL,
+        p_ocena_id,
+        v_stara,
+        p_nowa,
+        (SELECT id FROM uzytkownik WHERE login = p_email),
+        SYSTIMESTAMP
+    );
+
+    -- Log
+    ZALOGUJ_ZMIANE(p_email, 'OCENA', 'UPDATE', p_ocena_id);
+END;
+/
+
+
+-- Proceudra usuwania oceny:
+
+CREATE OR REPLACE PROCEDURE USUN_OCENE (
+    p_email     IN VARCHAR2,
+    p_ocena_id  IN NUMBER
+) IS
+    v_user_rola     VARCHAR2(20);
+    v_nauczyciel_id NUMBER;
+    v_autor_oceny_id NUMBER;
+BEGIN
+    -- Rola użytkownika
+    SELECT rola INTO v_user_rola FROM uzytkownik WHERE login = p_email;
+
+    -- Jeśli nauczyciel, znajdź jego ID
+    IF v_user_rola = 'NAUCZYCIEL' THEN
+        SELECT id INTO v_nauczyciel_id FROM nauczyciel WHERE email = p_email;
+    END IF;
+
+    -- Pobierz autora oceny
+    SELECT nauczyciel_id INTO v_autor_oceny_id FROM ocena WHERE id = p_ocena_id;
+
+    -- Walidacja dostępu
+    IF v_user_rola != 'ADMIN' AND v_autor_oceny_id != v_nauczyciel_id THEN
+        RAISE_APPLICATION_ERROR(-20012, 'Nie masz uprawnień do usunięcia tej oceny.');
+    END IF;
+
+    -- Usuwanie
+    DELETE FROM ocena WHERE id = p_ocena_id;
+
+    -- Log
+    ZALOGUJ_ZMIANE(p_email, 'OCENA', 'DELETE', p_ocena_id);
 END;
 /
 

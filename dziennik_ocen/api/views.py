@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import connection
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import DodajOceneSerializer, LoginSerializer
+from .serializers import DodajOceneSerializer, LoginSerializer, AktualizujOceneSerializer
 from drf_yasg import openapi
 
 class CustomLoginView(APIView):
@@ -71,6 +71,42 @@ class DodajOceneView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class AktualizujOceneView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=AktualizujOceneSerializer, security=[{'Bearer': []}])
+    def put(self, request):
+        serializer = AktualizujOceneSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = request.user.username
+        ocena_id = serializer.validated_data["ocena_id"]
+        nowa = serializer.validated_data["nowa"]
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('aktualizuj_ocene', [email, ocena_id, nowa])
+            return Response({"message": "Ocena zaktualizowana."})
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+class UsunOceneView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(manual_parameters=[
+        openapi.Parameter('ocena_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER)
+    ])
+    def delete(self, request):
+        email = request.user.username
+        ocena_id = request.query_params.get("ocena_id")
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.callproc('usun_ocene', [email, int(ocena_id)])
+            return Response({"message": "Ocena usunięta."})
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
 class OcenyStudentaView(APIView):
     permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
@@ -92,7 +128,7 @@ class OcenyStudentaView(APIView):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT przedmiot_nazwa, typ, wartosc, data_wystawienia, nauczyciel_imie, nauczyciel_nazwisko
+                    SELECT przedmiot_nazwa, typ, wartosc, ocena_id, data_wystawienia, nauczyciel_imie, nauczyciel_nazwisko
                     FROM vw_oceny_szczegoly
                     WHERE student_id = :id
                     AND (
@@ -113,12 +149,12 @@ class OcenyStudentaView(APIView):
                 if not rows:
                     if user_role == 'STUDENT':
                         return Response(
-                            {"error": "Brak danych: To nie twoje oceny lub student o podanym ID nie istnieje."},
+                            {"error": "Brak danych: To nie twoje oceny lub student o podanym ID nie istnieje/nie ma ocen."},
                             status=status.HTTP_404_NOT_FOUND
                         )
                     elif user_role == 'NAUCZYCIEL':
                         return Response(
-                            {"error": "Brak danych: Nie uczysz tego studenta lub student o podanym ID nie istnieje."},
+                            {"error": "Brak danych: Nie uczysz tego studenta lub student o podanym ID nie istnieje/nie ma ocen."},
                             status=status.HTTP_404_NOT_FOUND
                         )
                     else:  # ADMIN
@@ -131,9 +167,9 @@ class OcenyStudentaView(APIView):
                     results.append({
                         'Przedmiot': row[0],
                         'Typ': row[1],
-                        'Ocena': row[2],
-                        'Prowadzacy': f"{row[4]} {row[5]}",
-                        'Data Wystawienia': row[3]
+                        'Ocena': f"{row[2]} (ID Oceny: {row[3]})",
+                        'Prowadzacy': f"{row[5]} {row[6]}",
+                        'Data Wystawienia': row[4]
                     })
                 # Średnia
                 cursor.execute("""

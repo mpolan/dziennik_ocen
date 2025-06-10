@@ -60,6 +60,11 @@ SELECT * FROM GRUPA;
 -- ZAPISY
 SELECT * FROM ZAPISY;
 
+-- LOG_ZMIAN
+SELECT * FROM LOG_ZMIAN;
+
+-- HISTORIA_OCEN
+SELECT * FROM HISTORIA_OCEN;
 -- =======================================
 -- 👓 DANE Z WIDOKÓW
 -- =======================================
@@ -82,7 +87,22 @@ SELECT * FROM VW_ZALICZENIA;
 -- =======================================
 --              TESTY RECZNE
 -- =======================================
+select avg(wartosc) from ocena o
+join student s on s.id = o.student_id
+join zapisy z on z.student_id = s.id
+join grupa g on g.id = z.grupa_id
+where grupa_id = 7
+;--and nauczyciel_id = 209;
 
+select
+    round(avg(wartosc),2) as srednia,
+    g.nazwa as grupa_dane,
+    DENSE_RANK() OVER (ORDER BY AVG(O.WARTOSC) DESC) AS POZYCJA 
+from student s
+JOIN OCENA O ON S.ID = O.STUDENT_ID
+join zapisy z on s.id = z.student_id
+join grupa g on z.grupa_id = g.id
+group by g.nazwa;
 
 --BEGIN pokaz_ranking_przedmiotu(2); END;
 --/
@@ -275,3 +295,16 @@ JOIN ZAPISY z ON z.student_id = s.id AND z.przedmiot_id = o.przedmiot_id
 JOIN GRUPA g ON g.id = z.grupa_id
 GROUP BY n.id, n.imie, n.nazwisko
 ORDER BY liczba_grup DESC;
+
+select * from log_zmian
+order by id desc;
+commit;
+
+SELECT * FROM VW_OCENY_SZCZEGOLY
+where student_id = 49;
+
+select * from ocena
+where nauczyciel_id = 200;
+
+select * from nauczyciel;
+select * from vw_oceny_szczegoly;

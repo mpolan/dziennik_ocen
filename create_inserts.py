@@ -32,7 +32,7 @@ for przedmiot_id, ilosc_grup in zip(range(1, liczba_przedmiotow + 1), docelowy_r
 
 # Nauczyciele per przedmiot (2)
 nauczyciele_na_przedmiot = {}
-nauczyciel_counter = 201
+nauczyciel_counter = 200
 for pid in range(1, liczba_przedmiotow + 1):
     nauczyciele_na_przedmiot[pid] = [nauczyciel_counter, nauczyciel_counter + 1]
     nauczyciel_counter += 2
